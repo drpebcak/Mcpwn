@@ -1,0 +1,513 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Mcpwn",
+          "version": "1.0",
+          "informationUri": "https://github.com/mcpwn/mcpwn"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "state_desync: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "state_desync"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "state_desync: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "state_desync"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CAPABILITY_VALIDATION_BYPASS",
+          "level": "error",
+          "message": {
+            "text": "capability_fuzzing: CAPABILITY_VALIDATION_BYPASS"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "capability_fuzzing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "read_file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "read_file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "read_text_file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "read_text_file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "read_media_file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "read_media_file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "create_directory"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "create_directory"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "error",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory_with_sizes"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory_with_sizes"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory_with_sizes"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory_with_sizes"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "list_directory_with_sizes"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "directory_tree"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "directory_tree"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "get_file_info"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UNKNOWN",
+          "level": "warning",
+          "message": {
+            "text": "prompt_injection: issue"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "get_file_info"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

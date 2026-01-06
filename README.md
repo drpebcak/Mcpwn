@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-2025--12-orange.svg)](https://modelcontextprotocol.io)
 [![Security](https://img.shields.io/badge/security-testing-red.svg)](https://github.com/Teycir/Mcpwn)
-[![Tests](https://img.shields.io/badge/tests-54%20passing-brightgreen.svg)](tests_unit/)
+[![Tests](https://img.shields.io/badge/tests-66%20passing-brightgreen.svg)](tests_unit/)
 
 **Automated security scanner for Model Context Protocol servers that detects RCE, path traversal, prompt injection, and protocol vulnerabilities.**
 
@@ -66,6 +66,8 @@ python3 mcpwn.py --help
 
 ## Usage
 
+### Stdio Transport (Subprocess)
+
 ```bash
 # Basic scan
 python mcpwn.py npx -y @modelcontextprotocol/server-filesystem /tmp
@@ -96,6 +98,35 @@ python mcpwn.py --profile profiles/paranoid.json npx ...
 
 # Test against vulnerable server
 python mcpwn.py python3 test_data/dvmcp_server.py
+```
+
+### HTTP Transport (Streamable-HTTP)
+
+```bash
+# Scan HTTP MCP server (auto-detected)
+python mcpwn.py http://localhost:8080/mcp
+
+# HTTPS support
+python mcpwn.py https://mcp.example.com/api/v1
+
+# Quick HTTP scan
+python mcpwn.py --quick --rce-only http://localhost:8080
+
+# Manual transport override (optional)
+python mcpwn.py --transport http http://localhost:8080/mcp
+
+# Generate reports via HTTP
+python mcpwn.py --output-json report.json http://localhost:8080/mcp
+
+# HTTP with retry logic (for unstable networks)
+python mcpwn.py --max-retries 5 --initial-backoff 1.0 http://localhost:8080
+
+# Disable retries (fail fast)
+python mcpwn.py --max-retries 0 http://localhost:8080
+
+# Test against HTTP vulnerable server
+python test_data/http_mcp_server.py --port 8080  # In separate terminal
+python mcpwn.py http://localhost:8080
 ```
 
 ## Example Output
@@ -204,9 +235,43 @@ JSON reports include:
 | `--profile` | Security profile (e.g., profiles/paranoid.json) | None |
 | `--timeout` | Request timeout in seconds (quick mode uses 5s) | 10 |
 | `--parallel` | Enable parallel flooding | False |
+| `--transport` | Transport type: `stdio`, `http`, or `auto` (auto-detected) | auto |
 | `--output-json` | Export JSON report | None |
 | `--output-html` | Export HTML report | None |
 | `--output-sarif` | Export SARIF report (CI/CD) | None |
+
+## Transport Types
+
+Mcpwn supports two transport mechanisms:
+
+### Stdio Transport (Default)
+- Launches MCP server as subprocess
+- Communicates via stdin/stdout pipes
+- Use for testing local MCP servers
+- Examples: `npx @modelcontextprotocol/server-*`, `python3 server.py`
+
+### HTTP Transport
+- Connects to HTTP/HTTPS MCP endpoints
+- Uses streamable-HTTP protocol
+- Auto-detected when URL provided
+- Supports session management via headers
+- **Automatic retry with exponential backoff** for transient failures
+- Retries on: network errors, timeouts, 5xx server errors (not 4xx client errors)
+- Examples: `http://localhost:8080/mcp`, `https://api.example.com/mcp`
+
+#### HTTP Retry Configuration
+The HTTP transport includes automatic retry logic with exponential backoff to handle transient network failures:
+
+- `--max-retries N`: Maximum retry attempts (default: 3, use 0 to disable)
+- `--initial-backoff SECONDS`: Initial backoff delay (default: 0.5s)
+- `--backoff-multiplier FACTOR`: Exponential backoff multiplier (default: 2.0)
+- `--max-backoff SECONDS`: Maximum backoff delay cap (default: 10.0s)
+
+**Retry behavior:**
+- Automatically retries on: ConnectionError, TimeoutError, HTTP 5xx errors
+- Does NOT retry on: HTTP 4xx client errors (bad request, not found, etc.)
+- Exponential backoff: 0.5s → 1.0s → 2.0s → 4.0s → ... (capped at max-backoff)
+- Reconnects to server before each retry attempt
 
 ## Thread Safety
 
@@ -246,7 +311,7 @@ python mcpwn.py --safe-mode ...
 ### Running Unit Tests
 
 ```bash
-# Run all unit tests
+# Run all unit tests (66 tests including HTTP transport)
 python3 -m pytest tests_unit/ -v
 
 # Quick test run
@@ -254,11 +319,16 @@ python3 -m pytest tests_unit/ -q
 
 # Run specific test file
 python3 -m pytest tests_unit/test_detector.py -v
+
+# Test HTTP transport specifically
+python3 -m pytest tests_unit/test_http_integration.py -v
 ```
 
 ### Integration Testing
 
-Test against the included vulnerable server:
+Test against the included vulnerable servers:
+
+**Stdio Transport:**
 ```bash
 # Basic integration test
 python3 mcpwn.py python3 test_data/dvmcp_server.py
@@ -267,7 +337,19 @@ python3 mcpwn.py python3 test_data/dvmcp_server.py
 python3 mcpwn.py --quick --rce-only python3 test_data/dvmcp_server.py
 ```
 
-Expected findings:
+**HTTP Transport:**
+```bash
+# Start HTTP test server
+python3 test_data/http_mcp_server.py --port 8080  # In separate terminal
+
+# Test HTTP transport
+python3 mcpwn.py http://localhost:8080
+
+# Quick HTTP validation
+python3 mcpwn.py --quick --rce-only http://localhost:8080
+```
+
+Expected findings (both transports):
 - RCE via `execute_command` tool
 - Path traversal via `read_file` tool
 
@@ -287,11 +369,15 @@ python3 -m pytest tests_unit/ --cov=. --cov-report=html
 
 ### Test Suite Overview
 
-**54 tests covering:**
+**66 tests covering:**
 - **Core Components** (21 tests)
   - Semantic detector (9 tests)
   - Reporter (7 tests)
   - Payloads (5 tests)
+- **Transport Layer** (12 tests)
+  - HTTP transport unit tests (7 tests)
+  - HTTP integration tests (5 tests)
+  - Transport abstraction validation
 - **Side-Channel Detection** (9 tests)
   - Timing variance validation
   - Size anomaly detection
