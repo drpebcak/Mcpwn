@@ -235,14 +235,14 @@ JSON reports include:
 | `--profile` | Security profile (e.g., profiles/paranoid.json) | None |
 | `--timeout` | Request timeout in seconds (quick mode uses 5s) | 10 |
 | `--parallel` | Enable parallel flooding | False |
-| `--transport` | Transport type: `stdio`, `http`, or `auto` (auto-detected) | auto |
+| `--transport` | Transport type: `stdio`, `http`, `sse`, or `auto` (auto-detected) | auto |
 | `--output-json` | Export JSON report | None |
 | `--output-html` | Export HTML report | None |
 | `--output-sarif` | Export SARIF report (CI/CD) | None |
 
 ## Transport Types
 
-Mcpwn supports two transport mechanisms:
+Mcpwn supports three transport mechanisms:
 
 ### Stdio Transport (Default)
 - Launches MCP server as subprocess
@@ -250,14 +250,22 @@ Mcpwn supports two transport mechanisms:
 - Use for testing local MCP servers
 - Examples: `npx @modelcontextprotocol/server-*`, `python3 server.py`
 
-### HTTP Transport
-- Connects to HTTP/HTTPS MCP endpoints
-- Uses streamable-HTTP protocol
-- Auto-detected when URL provided
-- Supports session management via headers
+### HTTP Transport (Streamable HTTP)
+- Connects to HTTP/HTTPS MCP endpoints using Streamable HTTP protocol
+- Supports standard MCP session management via `Mcp-Session-Id` header
 - **Automatic retry with exponential backoff** for transient failures
 - Retries on: network errors, timeouts, 5xx server errors (not 4xx client errors)
-- Examples: `http://localhost:8080/mcp`, `https://api.example.com/mcp`
+- Examples: `http://localhost:8080`, `https://api.example.com/mcp`
+- Use `--transport http` to explicitly select this transport
+
+### SSE Transport (Server-Sent Events)
+- Experimental support for classic MCP SSE transport
+- Maintains persistent connection for server-to-client messages
+- Uses HTTP POST for client-to-server messages
+- Examples: `http://localhost:8080/sse`
+- Use `--transport sse` to explicitly select this transport
+
+**Note**: Most modern MCP servers use Streamable HTTP (not classic SSE). Mcpwn auto-detects Streamable HTTP by default for URLs. Use `--transport sse` only if your server specifically requires classic SSE transport.
 
 #### HTTP Retry Configuration
 The HTTP transport includes automatic retry logic with exponential backoff to handle transient network failures:

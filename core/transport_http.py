@@ -159,7 +159,7 @@ class HTTPTransport(Transport):
 
         # Add session ID if established (for stateful servers)
         if self._session_id:
-            headers["X-MCP-Session-ID"] = self._session_id
+            headers["Mcp-Session-Id"] = self._session_id
 
         start = time.time()
         last_error = None
@@ -177,8 +177,10 @@ class HTTPTransport(Transport):
                 response_body = response.read().decode("utf-8")
                 elapsed = time.time() - start
 
-                # Check for session ID in response headers
-                session_id = response.getheader("X-MCP-Session-ID")
+                # Check for session ID in response headers (try both variants)
+                session_id = response.getheader("Mcp-Session-Id") or response.getheader(
+                    "X-MCP-Session-ID"
+                )
                 if session_id:
                     self._session_id = session_id
 

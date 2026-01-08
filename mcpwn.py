@@ -34,9 +34,9 @@ def main():
     )
     parser.add_argument(
         "--transport",
-        choices=["stdio", "http", "auto"],
+        choices=["stdio", "http", "sse", "auto"],
         default="auto",
-        help="Transport type (auto-detected by default)",
+        help="Transport type: stdio, http, sse, or auto (auto-detects SSE for URLs)",
     )
     parser.add_argument(
         "--max-retries",
@@ -91,8 +91,8 @@ def main():
         target = args.target
         transport_type = "stdio" if args.transport == "auto" else args.transport
 
-    if transport_type == "http" and not isinstance(target, str):
-        logger.error("HTTP transport requires URL, not command")
+    if transport_type in ("http", "sse") and not isinstance(target, str):
+        logger.error(f"{transport_type.upper()} transport requires URL, not command")
         return 1
 
     if (
