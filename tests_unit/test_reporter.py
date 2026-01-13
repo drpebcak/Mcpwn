@@ -331,3 +331,77 @@ def test_sarif_enhanced_features():
         
     finally:
         os.unlink(report_file)
+
+def test_sarif_snippets():
+    """Test SARIF export includes code snippets for context"""
+    reporter = Reporter()
+    
+    # Test tool injection snippet
+    reporter.add_findings('tool_injection', [{
+        'type': 'BLIND_RCE_TIMING',
+        'severity': 'CRITICAL',
+        'tool': 'execute_command',
+        'arg': 'command',
+        'payload': '; sleep 10',
+        'category': 'command_injection',
+        'detections': ['Timing delay: 10.2s']
+    }])
+    
+    # Test path traversal snippet
+    reporter.add_findings('path_traversal', [{
+        'type': 'RESOURCE_TRAVERSAL',
+        'severity': 'HIGH',
+        'uri': 'file://../../../etc/passwd',
+        'detections': ['Path traversal detected']
+    }])
+    
+    # Test capability fuzzing snippet
+    reporter.add_findings('capability_fuzzing', [{
+        'type': 'CAPABILITY_VALIDATION_BYPASS',
+        'severity': 'HIGH',
+        'method': 'tools/call'
+    }])
+    
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.sarif', delete=False) as f:
+        report_file = f.name
+    
+    try:
+        reporter.to_sarif(report_file)
+        
+        with open(report_file) as f:
+            sarif = json.load(f)
+        
+        results = sarif['runs'][0]['results']
+        assert len(results) == 3
+        
+        # Check tool injection snippet
+        rce_result = results[0]
+        assert 'region' in rce_result['locations'][0]['physicalLocation']
+        rce_snippet = rce_result['locations'][0]['physicalLocation']['region']['snippet']['text']
+        assert '// MCP Tool Call' in rce_snippet
+        assert 'tools/call' in rce_snippet
+        assert 'execute_command' in rce_snippet
+        assert 'command' in rce_snippet
+        assert '; sleep 10' in rce_snippet
+        assert '// Detection:' in rce_snippet
+        assert 'Timing delay: 10.2s' in rce_snippet
+        
+        # Check path traversal snippet
+        traversal_result = results[1]
+        assert 'region' in traversal_result['locations'][0]['physicalLocation']
+        traversal_snippet = traversal_result['locations'][0]['physicalLocation']['region']['snippet']['text']
+        assert '// MCP Resource Access' in traversal_snippet
+        assert 'resources/read' in traversal_snippet
+        assert 'file://../../../etc/passwd' in traversal_snippet
+        assert 'Path traversal detected' in traversal_snippet
+        
+        # Check capability fuzzing snippet
+        cap_result = results[2]
+        assert 'region' in cap_result['locations'][0]['physicalLocation']
+        cap_snippet = cap_result['locations'][0]['physicalLocation']['region']['snippet']['text']
+        assert '// MCP Capability Validation Bypass' in cap_snippet
+        assert 'CAPABILITY_VALIDATION_BYPASS' in cap_snippet
+        assert 'tools/call' in cap_snippet
+        
+    finally:
+        os.unlink(report_file)

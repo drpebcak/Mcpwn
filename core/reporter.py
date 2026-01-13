@@ -103,6 +103,120 @@ body {{ font-family: monospace; margin: 20px; }}
         with open(filepath, "w") as f:
             json.dump(sarif, f, indent=2)
 
+    def _build_snippet(self, finding):
+        """Build a code snippet showing the vulnerability context"""
+        snippets = []
+
+        # For tool injection findings, show the tool call with payload
+        if finding.get("test") == "tool_injection":
+            tool_name = finding.get("tool", "unknown_tool")
+            arg_path = finding.get("arg", "argument")
+            payload = finding.get("payload", "")
+
+            # Truncate very long payloads in snippet
+            display_payload = (
+                payload if len(str(payload)) <= 200 else str(payload)[:197] + "..."
+            )
+
+            snippets.append(f"// MCP Tool Call")
+            snippets.append(f"tools/call")
+            snippets.append(f'  name: "{tool_name}"')
+            snippets.append(f"  arguments:")
+            snippets.append(f'    {arg_path}: "{display_payload}"')
+
+            # Add detection context if available
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                snippets.append("// Detection:")
+                for detection in finding["detections"][:3]:  # Limit to first 3
+                    snippets.append(f"// {detection}")
+
+        # For path traversal findings, show the resource URI
+        elif finding.get("test") == "path_traversal":
+            uri = finding.get("uri", "")
+            snippets.append(f"// MCP Resource Access")
+            snippets.append(f"resources/read")
+            snippets.append(f'  uri: "{uri}"')
+
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                snippets.append("// Detection:")
+                for detection in finding["detections"][:3]:
+                    snippets.append(f"// {detection}")
+
+        # For prompt injection findings
+        elif finding.get("test") == "prompt_injection":
+            tool_name = finding.get("tool", "unknown_tool")
+            risk = finding.get("risk", "Unknown risk")
+            snippets.append(f"// MCP Tool: {tool_name}")
+            snippets.append(f"// Risk: {risk}")
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                for detection in finding["detections"][:5]:
+                    snippet_line = str(detection)
+                    if len(snippet_line) > 100:
+                        snippet_line = snippet_line[:97] + "..."
+                    snippets.append(f"// {snippet_line}")
+
+        # For capability validation bypass
+        elif finding.get("test") == "capability_fuzzing":
+            snippets.append(f"// MCP Capability Validation Bypass")
+            snippets.append(f"// Type: {finding.get('type', 'Unknown')}")
+            if "method" in finding:
+                snippets.append(f"// Method: {finding['method']}")
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                for detection in finding["detections"][:3]:
+                    snippets.append(f"// {detection}")
+
+        # For race conditions
+        elif finding.get("test") == "race_condition":
+            tool_name = finding.get("tool", "unknown_tool")
+            finding_type = finding.get("type", "RACE_CONDITION")
+            snippets.append(f"// Race Condition in {tool_name}")
+            snippets.append(f"// Type: {finding_type}")
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                for detection in finding["detections"][:3]:
+                    snippets.append(f"// {detection}")
+
+        # For subscription flooding
+        elif finding.get("test") == "subscription_flood":
+            snippets.append(f"// Subscription Flooding Attack")
+            snippets.append(f"// Type: {finding.get('type', 'DOS')}")
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                for detection in finding["detections"][:3]:
+                    snippets.append(f"// {detection}")
+
+        # For resource exhaustion
+        elif finding.get("test") == "resource_exhaustion":
+            tool_name = finding.get("tool", "unknown_tool")
+            finding_type = finding.get("type", "EXHAUSTION")
+            snippets.append(f"// Resource Exhaustion in {tool_name}")
+            snippets.append(f"// Type: {finding_type}")
+            if "detections" in finding and finding["detections"]:
+                snippets.append("")
+                for detection in finding["detections"][:3]:
+                    snippets.append(f"// {detection}")
+
+        # Generic fallback for other finding types
+        elif snippets == []:
+            test_name = finding.get("test", "unknown_test")
+            finding_type = finding.get("type", "UNKNOWN")
+            snippets.append(f"// {test_name}")
+            snippets.append(f"// Type: {finding_type}")
+
+            # Add any available context
+            if "tool" in finding:
+                snippets.append(f"// Tool: {finding['tool']}")
+            if "arg" in finding:
+                snippets.append(f"// Argument: {finding['arg']}")
+            if "category" in finding:
+                snippets.append(f"// Category: {finding['category']}")
+
+        return "\n".join(snippets) if snippets else None
+
     def _build_sarif_rules(self):
         """Build SARIF rules catalog with metadata for each finding type"""
         # Map finding types to CWE, descriptions, and help text
@@ -303,19 +417,25 @@ body {{ font-family: monospace; margin: 20px; }}
         if "risk" in finding:
             properties["risk_assessment"] = finding["risk"]
 
+        # Build location with snippet context
+        location = {
+            "physicalLocation": {
+                "artifactLocation": {
+                    "uri": finding.get("tool", finding.get("test", "unknown"))
+                }
+            }
+        }
+
+        # Add region with snippet if we have enough context
+        snippet_text = self._build_snippet(finding)
+        if snippet_text:
+            location["physicalLocation"]["region"] = {"snippet": {"text": snippet_text}}
+
         result = {
             "ruleId": finding.get("type", finding.get("category", "UNKNOWN")),
             "level": severity_map.get(finding.get("severity", "MEDIUM"), "warning"),
             "message": {"text": message_text},
-            "locations": [
-                {
-                    "physicalLocation": {
-                        "artifactLocation": {
-                            "uri": finding.get("tool", finding.get("test", "unknown"))
-                        }
-                    }
-                }
-            ],
+            "locations": [location],
         }
 
         # Add rank for result prioritization (0.0 to 100.0, higher = more important)
