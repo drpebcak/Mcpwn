@@ -251,157 +251,196 @@ def test_sarif_payload_truncation():
     finally:
         os.unlink(report_file)
 
+
 def test_sarif_enhanced_features():
     """Test SARIF export includes enhanced features (rules, rank, fingerprints)"""
     reporter = Reporter()
-    
-    reporter.add_findings('tool_injection', [{
-        'type': 'BLIND_RCE_TIMING',
-        'severity': 'CRITICAL',
-        'tool': 'execute_command',
-        'arg': 'command',
-        'payload': '; sleep 10',
-        'category': 'command_injection',
-        'detections': ['Timing delay: 10.2s']
-    }])
-    
-    reporter.add_findings('tool_injection', [{
-        'type': 'FILE_READ',
-        'severity': 'HIGH',
-        'tool': 'read_file',
-        'arg': 'path',
-        'payload': '../../../etc/passwd'
-    }])
-    
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.sarif', delete=False) as f:
+
+    reporter.add_findings(
+        "tool_injection",
+        [
+            {
+                "type": "BLIND_RCE_TIMING",
+                "severity": "CRITICAL",
+                "tool": "execute_command",
+                "arg": "command",
+                "payload": "; sleep 10",
+                "category": "command_injection",
+                "detections": ["Timing delay: 10.2s"],
+            }
+        ],
+    )
+
+    reporter.add_findings(
+        "tool_injection",
+        [
+            {
+                "type": "FILE_READ",
+                "severity": "HIGH",
+                "tool": "read_file",
+                "arg": "path",
+                "payload": "../../../etc/passwd",
+            }
+        ],
+    )
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".sarif", delete=False) as f:
         report_file = f.name
-    
+
     try:
         reporter.to_sarif(report_file)
-        
+
         with open(report_file) as f:
             sarif = json.load(f)
-        
+
         # Check rules catalog exists
-        driver = sarif['runs'][0]['tool']['driver']
-        assert 'rules' in driver
-        assert len(driver['rules']) == 2
-        
+        driver = sarif["runs"][0]["tool"]["driver"]
+        assert "rules" in driver
+        assert len(driver["rules"]) == 2
+
         # Check rule metadata
-        rce_rule = next(r for r in driver['rules'] if r['id'] == 'BLIND_RCE_TIMING')
-        assert rce_rule['name'] == 'Blind Remote Code Execution (Timing-based)'
-        assert 'shortDescription' in rce_rule
-        assert 'fullDescription' in rce_rule
-        assert 'help' in rce_rule
-        assert 'markdown' in rce_rule['help']
-        assert 'properties' in rce_rule
-        assert rce_rule['properties']['precision'] == 'high'
-        assert rce_rule['properties']['security-severity'] == '9.8'
-        assert 'tags' in rce_rule['properties']
-        assert 'security' in rce_rule['properties']['tags']
-        
+        rce_rule = next(r for r in driver["rules"] if r["id"] == "BLIND_RCE_TIMING")
+        assert rce_rule["name"] == "Blind Remote Code Execution (Timing-based)"
+        assert "shortDescription" in rce_rule
+        assert "fullDescription" in rce_rule
+        assert "help" in rce_rule
+        assert "markdown" in rce_rule["help"]
+        assert "properties" in rce_rule
+        assert rce_rule["properties"]["precision"] == "high"
+        assert rce_rule["properties"]["security-severity"] == "9.8"
+        assert "tags" in rce_rule["properties"]
+        assert "security" in rce_rule["properties"]["tags"]
+
         # Check CWE relationships
-        assert 'relationships' in rce_rule
-        assert rce_rule['relationships'][0]['target']['id'] == '78'
-        assert rce_rule['relationships'][0]['target']['toolComponent']['name'] == 'CWE'
-        
+        assert "relationships" in rce_rule
+        assert rce_rule["relationships"][0]["target"]["id"] == "78"
+        assert rce_rule["relationships"][0]["target"]["toolComponent"]["name"] == "CWE"
+
         # Check result enhancements
-        results = sarif['runs'][0]['results']
+        results = sarif["runs"][0]["results"]
         assert len(results) == 2
-        
+
         rce_result = results[0]
-        assert rce_result['ruleId'] == 'BLIND_RCE_TIMING'
-        
+        assert rce_result["ruleId"] == "BLIND_RCE_TIMING"
+
         # Check rank
-        assert 'rank' in rce_result
-        assert rce_result['rank'] == 95.0  # CRITICAL severity
-        
+        assert "rank" in rce_result
+        assert rce_result["rank"] == 95.0  # CRITICAL severity
+
         # Check fingerprints
-        assert 'partialFingerprints' in rce_result
-        assert 'primaryLocationLineHash' in rce_result['partialFingerprints']
-        
+        assert "partialFingerprints" in rce_result
+        assert "primaryLocationLineHash" in rce_result["partialFingerprints"]
+
         # Check timestamp in properties
-        assert 'timestamp' in rce_result['properties']
-        
+        assert "timestamp" in rce_result["properties"]
+
         # Verify different findings have different fingerprints
         file_read_result = results[1]
-        assert file_read_result['rank'] == 80.0  # HIGH severity
-        assert file_read_result['partialFingerprints']['primaryLocationLineHash'] != \
-               rce_result['partialFingerprints']['primaryLocationLineHash']
-        
+        assert file_read_result["rank"] == 80.0  # HIGH severity
+        assert (
+            file_read_result["partialFingerprints"]["primaryLocationLineHash"]
+            != rce_result["partialFingerprints"]["primaryLocationLineHash"]
+        )
+
     finally:
         os.unlink(report_file)
+
 
 def test_sarif_snippets():
     """Test SARIF export includes code snippets for context"""
     reporter = Reporter()
-    
+
     # Test tool injection snippet
-    reporter.add_findings('tool_injection', [{
-        'type': 'BLIND_RCE_TIMING',
-        'severity': 'CRITICAL',
-        'tool': 'execute_command',
-        'arg': 'command',
-        'payload': '; sleep 10',
-        'category': 'command_injection',
-        'detections': ['Timing delay: 10.2s']
-    }])
-    
+    reporter.add_findings(
+        "tool_injection",
+        [
+            {
+                "type": "BLIND_RCE_TIMING",
+                "severity": "CRITICAL",
+                "tool": "execute_command",
+                "arg": "command",
+                "payload": "; sleep 10",
+                "category": "command_injection",
+                "detections": ["Timing delay: 10.2s"],
+            }
+        ],
+    )
+
     # Test path traversal snippet
-    reporter.add_findings('path_traversal', [{
-        'type': 'RESOURCE_TRAVERSAL',
-        'severity': 'HIGH',
-        'uri': 'file://../../../etc/passwd',
-        'detections': ['Path traversal detected']
-    }])
-    
+    reporter.add_findings(
+        "path_traversal",
+        [
+            {
+                "type": "RESOURCE_TRAVERSAL",
+                "severity": "HIGH",
+                "uri": "file://../../../etc/passwd",
+                "detections": ["Path traversal detected"],
+            }
+        ],
+    )
+
     # Test capability fuzzing snippet
-    reporter.add_findings('capability_fuzzing', [{
-        'type': 'CAPABILITY_VALIDATION_BYPASS',
-        'severity': 'HIGH',
-        'method': 'tools/call'
-    }])
-    
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.sarif', delete=False) as f:
+    reporter.add_findings(
+        "capability_fuzzing",
+        [
+            {
+                "type": "CAPABILITY_VALIDATION_BYPASS",
+                "severity": "HIGH",
+                "method": "tools/call",
+            }
+        ],
+    )
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".sarif", delete=False) as f:
         report_file = f.name
-    
+
     try:
         reporter.to_sarif(report_file)
-        
+
         with open(report_file) as f:
             sarif = json.load(f)
-        
-        results = sarif['runs'][0]['results']
+
+        results = sarif["runs"][0]["results"]
         assert len(results) == 3
-        
+
         # Check tool injection snippet
         rce_result = results[0]
-        assert 'region' in rce_result['locations'][0]['physicalLocation']
-        rce_snippet = rce_result['locations'][0]['physicalLocation']['region']['snippet']['text']
-        assert '// MCP Tool Call' in rce_snippet
-        assert 'tools/call' in rce_snippet
-        assert 'execute_command' in rce_snippet
-        assert 'command' in rce_snippet
-        assert '; sleep 10' in rce_snippet
-        assert '// Detection:' in rce_snippet
-        assert 'Timing delay: 10.2s' in rce_snippet
-        
+        assert "region" in rce_result["locations"][0]["physicalLocation"]
+        rce_snippet = rce_result["locations"][0]["physicalLocation"]["region"][
+            "snippet"
+        ]["text"]
+        assert "MCP Tool Call" in rce_snippet
+        assert "METHOD: tools/call" in rce_snippet
+        assert "REQUEST:" in rce_snippet
+        assert '"name": "execute_command"' in rce_snippet
+        assert '"command": "; sleep 10"' in rce_snippet
+        assert "RESULT:" in rce_snippet
+        assert "✗ Timing delay: 10.2s" in rce_snippet
+
         # Check path traversal snippet
         traversal_result = results[1]
-        assert 'region' in traversal_result['locations'][0]['physicalLocation']
-        traversal_snippet = traversal_result['locations'][0]['physicalLocation']['region']['snippet']['text']
-        assert '// MCP Resource Access' in traversal_snippet
-        assert 'resources/read' in traversal_snippet
-        assert 'file://../../../etc/passwd' in traversal_snippet
-        assert 'Path traversal detected' in traversal_snippet
-        
+        assert "region" in traversal_result["locations"][0]["physicalLocation"]
+        traversal_snippet = traversal_result["locations"][0]["physicalLocation"][
+            "region"
+        ]["snippet"]["text"]
+        assert "MCP Resource Access" in traversal_snippet
+        assert "METHOD: resources/read" in traversal_snippet
+        assert "REQUEST:" in traversal_snippet
+        assert "file://../../../etc/passwd" in traversal_snippet
+        assert "RESULT:" in traversal_snippet
+        assert "✗ Path traversal detected" in traversal_snippet
+
         # Check capability fuzzing snippet
         cap_result = results[2]
-        assert 'region' in cap_result['locations'][0]['physicalLocation']
-        cap_snippet = cap_result['locations'][0]['physicalLocation']['region']['snippet']['text']
-        assert '// MCP Capability Validation Bypass' in cap_snippet
-        assert 'CAPABILITY_VALIDATION_BYPASS' in cap_snippet
-        assert 'tools/call' in cap_snippet
-        
+        assert "region" in cap_result["locations"][0]["physicalLocation"]
+        cap_snippet = cap_result["locations"][0]["physicalLocation"]["region"][
+            "snippet"
+        ]["text"]
+        assert "MCP Protocol" in cap_snippet
+        assert "CAPABILITY_VALIDATION_BYPASS" in cap_snippet
+        assert "METHOD: initialize" in cap_snippet
+        assert "REQUEST:" in cap_snippet
+        assert "✗ Server accepted invalid capabilities" in cap_snippet
+
     finally:
         os.unlink(report_file)

@@ -112,108 +112,215 @@ body {{ font-family: monospace; margin: 20px; }}
             tool_name = finding.get("tool", "unknown_tool")
             arg_path = finding.get("arg", "argument")
             payload = finding.get("payload", "")
+            category = finding.get("category", "injection")
 
             # Truncate very long payloads in snippet
             display_payload = (
                 payload if len(str(payload)) <= 200 else str(payload)[:197] + "..."
             )
 
-            snippets.append(f"// MCP Tool Call")
-            snippets.append(f"tools/call")
-            snippets.append(f'  name: "{tool_name}"')
-            snippets.append(f"  arguments:")
-            snippets.append(f'    {arg_path}: "{display_payload}"')
+            snippets.append(f"// MCP Tool Call - {category.upper()}")
+            snippets.append(f"METHOD: tools/call")
+            snippets.append(f"")
+            snippets.append(f"REQUEST:")
+            snippets.append(f"{{")
+            snippets.append(f'  "method": "tools/call",')
+            snippets.append(f'  "params": {{')
+            snippets.append(f'    "name": "{tool_name}",')
+            snippets.append(f'    "arguments": {{')
+            snippets.append(f'      "{arg_path}": "{display_payload}"')
+            snippets.append(f"    }}")
+            snippets.append(f"  }}")
+            snippets.append(f"}}")
 
             # Add detection context if available
             if "detections" in finding and finding["detections"]:
                 snippets.append("")
-                snippets.append("// Detection:")
+                snippets.append("RESULT:")
                 for detection in finding["detections"][:3]:  # Limit to first 3
-                    snippets.append(f"// {detection}")
+                    snippets.append(f"  ✗ {detection}")
 
         # For path traversal findings, show the resource URI
         elif finding.get("test") == "path_traversal":
             uri = finding.get("uri", "")
-            snippets.append(f"// MCP Resource Access")
-            snippets.append(f"resources/read")
-            snippets.append(f'  uri: "{uri}"')
+            snippets.append(f"// MCP Resource Access - PATH TRAVERSAL")
+            snippets.append(f"METHOD: resources/read")
+            snippets.append(f"")
+            snippets.append(f"REQUEST:")
+            snippets.append(f"{{")
+            snippets.append(f'  "method": "resources/read",')
+            snippets.append(f'  "params": {{')
+            snippets.append(f'    "uri": "{uri}"')
+            snippets.append(f"  }}")
+            snippets.append(f"}}")
 
             if "detections" in finding and finding["detections"]:
                 snippets.append("")
-                snippets.append("// Detection:")
+                snippets.append("RESULT:")
                 for detection in finding["detections"][:3]:
-                    snippets.append(f"// {detection}")
+                    snippets.append(f"  ✗ {detection}")
 
         # For prompt injection findings
         elif finding.get("test") == "prompt_injection":
             tool_name = finding.get("tool", "unknown_tool")
+            arg = finding.get("arg", "unknown")
+            payload = finding.get("payload", "")
             risk = finding.get("risk", "Unknown risk")
-            snippets.append(f"// MCP Tool: {tool_name}")
-            snippets.append(f"// Risk: {risk}")
-            if "detections" in finding and finding["detections"]:
-                snippets.append("")
-                for detection in finding["detections"][:5]:
-                    snippet_line = str(detection)
-                    if len(snippet_line) > 100:
-                        snippet_line = snippet_line[:97] + "..."
-                    snippets.append(f"// {snippet_line}")
+
+            display_payload = (
+                payload if len(str(payload)) <= 150 else str(payload)[:147] + "..."
+            )
+
+            snippets.append(f"// MCP Tool - PROMPT INJECTION RISK")
+            snippets.append(f"METHOD: tools/call")
+            snippets.append(f"")
+            snippets.append(f"REQUEST:")
+            snippets.append(f"{{")
+            snippets.append(f'  "method": "tools/call",')
+            snippets.append(f'  "params": {{')
+            snippets.append(f'    "name": "{tool_name}",')
+            snippets.append(f'    "arguments": {{')
+            snippets.append(f'      "{arg}": "{display_payload}"')
+            snippets.append(f"    }}")
+            snippets.append(f"  }}")
+            snippets.append(f"}}")
+            snippets.append(f"")
+            snippets.append(f"RISK: {risk}")
+            snippets.append(f"// Tool output may contain injected prompts that could")
+            snippets.append(f"// manipulate LLM behavior or leak sensitive context")
 
         # For capability validation bypass
         elif finding.get("test") == "capability_fuzzing":
-            snippets.append(f"// MCP Capability Validation Bypass")
-            snippets.append(f"// Type: {finding.get('type', 'Unknown')}")
-            if "method" in finding:
-                snippets.append(f"// Method: {finding['method']}")
-            if "detections" in finding and finding["detections"]:
-                snippets.append("")
-                for detection in finding["detections"][:3]:
-                    snippets.append(f"// {detection}")
+            finding_type = finding.get("type", "CAPABILITY_VALIDATION_BYPASS")
+            payload = finding.get("payload", {})
+            response = finding.get("response", "")
+
+            # Try to parse payload if it's a string representation
+            if isinstance(payload, str):
+                payload_display = (
+                    payload[:200] + "..." if len(payload) > 200 else payload
+                )
+            else:
+                payload_display = str(payload)[:200]
+
+            snippets.append(f"// MCP Protocol - {finding_type}")
+            snippets.append(f"METHOD: initialize")
+            snippets.append(f"")
+            snippets.append(f"REQUEST:")
+            snippets.append(f"{{")
+            snippets.append(f'  "method": "initialize",')
+            snippets.append(f'  "params": {{')
+            snippets.append(f'    "protocolVersion": "2024-11-05",')
+            snippets.append(f"    \"capabilities\": {payload_display},")
+            snippets.append(
+                f'    "clientInfo": {{"name": "mcpwn", "version": "1.0"}}'
+            )
+            snippets.append(f"  }}")
+            snippets.append(f"}}")
+            snippets.append(f"")
+            snippets.append(f"RESULT:")
+            snippets.append(f"  ✗ Server accepted invalid capabilities")
+            if response:
+                response_preview = (
+                    response[:100] + "..." if len(response) > 100 else response
+                )
+                snippets.append(f"  Server response: {response_preview}")
 
         # For race conditions
         elif finding.get("test") == "race_condition":
             tool_name = finding.get("tool", "unknown_tool")
             finding_type = finding.get("type", "RACE_CONDITION")
-            snippets.append(f"// Race Condition in {tool_name}")
-            snippets.append(f"// Type: {finding_type}")
+
+            snippets.append(f"// MCP Tool - {finding_type}")
+            snippets.append(f"METHOD: tools/call")
+            snippets.append(f"TOOL: {tool_name}")
+            snippets.append(f"")
+            snippets.append(f"ATTACK:")
+            snippets.append(f"  Sent 5+ concurrent requests to {tool_name}")
+            snippets.append(f"")
+            snippets.append(f"RESULT:")
             if "detections" in finding and finding["detections"]:
-                snippets.append("")
                 for detection in finding["detections"][:3]:
-                    snippets.append(f"// {detection}")
+                    snippets.append(f"  ✗ {detection}")
+            else:
+                snippets.append(f"  ✗ Race condition detected in concurrent execution")
 
         # For subscription flooding
         elif finding.get("test") == "subscription_flood":
-            snippets.append(f"// Subscription Flooding Attack")
-            snippets.append(f"// Type: {finding.get('type', 'DOS')}")
-            if "detections" in finding and finding["detections"]:
-                snippets.append("")
-                for detection in finding["detections"][:3]:
-                    snippets.append(f"// {detection}")
+            finding_type = finding.get("type", "DOS")
+            detail = finding.get(
+                "detail", "Subscription flood caused server degradation"
+            )
+
+            snippets.append(f"// MCP Protocol - SUBSCRIPTION FLOODING")
+            snippets.append(f"METHOD: resources/subscribe")
+            snippets.append(f"")
+            snippets.append(f"ATTACK:")
+            snippets.append(f"  for i in range(1000):")
+            snippets.append(
+                f'    send("resources/subscribe", {{"uri": f"file:///tmp/flood_{{i}}.txt"}})'
+            )
+            snippets.append(f"")
+            snippets.append(f"RESULT:")
+            snippets.append(f"  ✗ {finding_type}: {detail}")
 
         # For resource exhaustion
         elif finding.get("test") == "resource_exhaustion":
             tool_name = finding.get("tool", "unknown_tool")
             finding_type = finding.get("type", "EXHAUSTION")
-            snippets.append(f"// Resource Exhaustion in {tool_name}")
-            snippets.append(f"// Type: {finding_type}")
+
+            snippets.append(f"// MCP Tool - RESOURCE EXHAUSTION")
+            snippets.append(f"METHOD: tools/call")
+            snippets.append(f"TOOL: {tool_name}")
+            snippets.append(f"")
+            snippets.append(f"ATTACK:")
+            snippets.append(f"  Sent resource-intensive requests to {tool_name}")
+            snippets.append(f"")
+            snippets.append(f"RESULT:")
             if "detections" in finding and finding["detections"]:
-                snippets.append("")
                 for detection in finding["detections"][:3]:
-                    snippets.append(f"// {detection}")
+                    snippets.append(f"  ✗ {detection}")
+            else:
+                snippets.append(f"  ✗ {finding_type}")
+
+        # For state desync
+        elif finding.get("test") == "state_desync":
+            finding_data = finding.get("finding", "")
+            snippets.append(f"// MCP Protocol - STATE DESYNCHRONIZATION")
+            snippets.append(f"")
+            snippets.append(f"ISSUE:")
+            snippets.append(f"  {finding_data}")
+            snippets.append(f"")
+            snippets.append(f"IMPACT:")
+            snippets.append(f"  Server and client state are inconsistent")
+            snippets.append(f"  This may allow unauthorized operations")
 
         # Generic fallback for other finding types
-        elif snippets == []:
+        if not snippets:
             test_name = finding.get("test", "unknown_test")
             finding_type = finding.get("type", "UNKNOWN")
-            snippets.append(f"// {test_name}")
-            snippets.append(f"// Type: {finding_type}")
+            snippets.append(f"// {test_name.upper().replace('_', ' ')}")
+            snippets.append(f"TYPE: {finding_type}")
+            snippets.append(f"")
 
             # Add any available context
             if "tool" in finding:
-                snippets.append(f"// Tool: {finding['tool']}")
+                snippets.append(f"TOOL: {finding['tool']}")
             if "arg" in finding:
-                snippets.append(f"// Argument: {finding['arg']}")
+                snippets.append(f"ARGUMENT: {finding['arg']}")
+            if "payload" in finding:
+                payload = str(finding["payload"])
+                display = payload[:150] + "..." if len(payload) > 150 else payload
+                snippets.append(f"PAYLOAD: {display}")
             if "category" in finding:
-                snippets.append(f"// Category: {finding['category']}")
+                snippets.append(f"CATEGORY: {finding['category']}")
+            if "detail" in finding:
+                snippets.append(f"DETAIL: {finding['detail']}")
+            if "detections" in finding and finding["detections"]:
+                snippets.append(f"")
+                snippets.append(f"DETECTIONS:")
+                for detection in finding["detections"][:5]:
+                    snippets.append(f"  • {detection}")
 
         return "\n".join(snippets) if snippets else None
 
