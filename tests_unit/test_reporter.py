@@ -250,3 +250,84 @@ def test_sarif_payload_truncation():
 
     finally:
         os.unlink(report_file)
+
+def test_sarif_enhanced_features():
+    """Test SARIF export includes enhanced features (rules, rank, fingerprints)"""
+    reporter = Reporter()
+    
+    reporter.add_findings('tool_injection', [{
+        'type': 'BLIND_RCE_TIMING',
+        'severity': 'CRITICAL',
+        'tool': 'execute_command',
+        'arg': 'command',
+        'payload': '; sleep 10',
+        'category': 'command_injection',
+        'detections': ['Timing delay: 10.2s']
+    }])
+    
+    reporter.add_findings('tool_injection', [{
+        'type': 'FILE_READ',
+        'severity': 'HIGH',
+        'tool': 'read_file',
+        'arg': 'path',
+        'payload': '../../../etc/passwd'
+    }])
+    
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.sarif', delete=False) as f:
+        report_file = f.name
+    
+    try:
+        reporter.to_sarif(report_file)
+        
+        with open(report_file) as f:
+            sarif = json.load(f)
+        
+        # Check rules catalog exists
+        driver = sarif['runs'][0]['tool']['driver']
+        assert 'rules' in driver
+        assert len(driver['rules']) == 2
+        
+        # Check rule metadata
+        rce_rule = next(r for r in driver['rules'] if r['id'] == 'BLIND_RCE_TIMING')
+        assert rce_rule['name'] == 'Blind Remote Code Execution (Timing-based)'
+        assert 'shortDescription' in rce_rule
+        assert 'fullDescription' in rce_rule
+        assert 'help' in rce_rule
+        assert 'markdown' in rce_rule['help']
+        assert 'properties' in rce_rule
+        assert rce_rule['properties']['precision'] == 'high'
+        assert rce_rule['properties']['security-severity'] == '9.8'
+        assert 'tags' in rce_rule['properties']
+        assert 'security' in rce_rule['properties']['tags']
+        
+        # Check CWE relationships
+        assert 'relationships' in rce_rule
+        assert rce_rule['relationships'][0]['target']['id'] == '78'
+        assert rce_rule['relationships'][0]['target']['toolComponent']['name'] == 'CWE'
+        
+        # Check result enhancements
+        results = sarif['runs'][0]['results']
+        assert len(results) == 2
+        
+        rce_result = results[0]
+        assert rce_result['ruleId'] == 'BLIND_RCE_TIMING'
+        
+        # Check rank
+        assert 'rank' in rce_result
+        assert rce_result['rank'] == 95.0  # CRITICAL severity
+        
+        # Check fingerprints
+        assert 'partialFingerprints' in rce_result
+        assert 'primaryLocationLineHash' in rce_result['partialFingerprints']
+        
+        # Check timestamp in properties
+        assert 'timestamp' in rce_result['properties']
+        
+        # Verify different findings have different fingerprints
+        file_read_result = results[1]
+        assert file_read_result['rank'] == 80.0  # HIGH severity
+        assert file_read_result['partialFingerprints']['primaryLocationLineHash'] != \
+               rce_result['partialFingerprints']['primaryLocationLineHash']
+        
+    finally:
+        os.unlink(report_file)
