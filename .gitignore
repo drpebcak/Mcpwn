@@ -148,3 +148,6 @@ docs
 *.pyc
 __pycache__/
 .history
+
+# Sarif file
+mcpwn-results.sarif

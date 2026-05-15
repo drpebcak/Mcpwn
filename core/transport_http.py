@@ -141,6 +141,74 @@ class HTTPTransport(Transport):
         except (OSError, http.client.HTTPException) as e:
             raise RuntimeError(f"Failed to reconnect to HTTP server: {e}")
 
+    def _parse_sse_response(self, response_body, request_id=None):
+        """
+        Parse a finite text/event-stream response body from a streamable HTTP POST.
+
+        Returns the JSON-RPC message matching request_id when present, otherwise the
+        first JSON-RPC message found in the SSE data fields.
+        """
+        messages = []
+        event_data = []
+
+        def flush_event():
+            if not event_data:
+                return
+
+            data = "\n".join(event_data)
+            event_data.clear()
+
+            try:
+                message = json.loads(data)
+            except (json.JSONDecodeError, ValueError):
+                logger.debug(f"Non-JSON SSE data: {data[:100]}")
+                return
+
+            if isinstance(message, list):
+                messages.extend(
+                    item
+                    for item in message
+                    if isinstance(item, dict) and "jsonrpc" in item
+                )
+            elif isinstance(message, dict) and "jsonrpc" in message:
+                messages.append(message)
+            else:
+                logger.debug(f"Ignoring non-JSON-RPC SSE message: {message}")
+
+        for raw_line in response_body.splitlines():
+            line = raw_line.rstrip("\r")
+
+            # Empty line signals the end of an SSE event.
+            if not line:
+                flush_event()
+                continue
+
+            # Comments/heartbeats start with ':' and should be ignored.
+            if line.startswith(":"):
+                continue
+
+            if ":" in line:
+                field, value = line.split(":", 1)
+                value = value.lstrip()
+            else:
+                field, value = line, ""
+
+            if field == "data":
+                event_data.append(value)
+
+        # Flush final event if the body does not end with a blank line.
+        flush_event()
+
+        if request_id is not None:
+            for message in messages:
+                if message.get("id") == request_id:
+                    return message
+
+        if messages:
+            return messages[0]
+
+        raise ValueError("No JSON-RPC message found in text/event-stream response")
+
     def _make_http_request(self, json_rpc_msg, timeout):
         """
         Make HTTP POST request with JSON-RPC payload (with retry logic)
@@ -155,6 +223,7 @@ class HTTPTransport(Transport):
         headers = {
             "Content-Type": "application/json",
             "Content-Length": str(len(body)),
+            "Accept": "application/json,text/event-stream",
         }
 
         # Add session ID if established (for stateful servers)
@@ -174,7 +243,7 @@ class HTTPTransport(Transport):
                 response = self.connection.getresponse()
 
                 # Read response body
-                response_body = response.read().decode("utf-8")
+                response_body = response.read().decode("utf-8", errors="replace")
                 elapsed = time.time() - start
 
                 # Check for session ID in response headers (try both variants)
@@ -206,11 +275,18 @@ class HTTPTransport(Transport):
                         f"HTTP error {response.status}: {response.reason}"
                     )
 
-                # Parse JSON response
+                # Parse JSON response. Streamable HTTP servers may encode the
+                # JSON-RPC response as a finite Server-Sent Events body.
+                content_type = response.getheader("Content-Type", "")
                 try:
-                    parsed = json.loads(response_body)
+                    if "text/event-stream" in content_type.lower():
+                        parsed = self._parse_sse_response(
+                            response_body, json_rpc_msg.get("id")
+                        )
+                    else:
+                        parsed = json.loads(response_body)
                 except (json.JSONDecodeError, ValueError) as e:
-                    logger.debug(f"JSON parse error: {e}")
+                    logger.debug(f"Response parse error: {e}")
                     parsed = response_body
 
                 # Success - log retry info if this wasn't the first attempt

